@@ -155,24 +155,33 @@ except ImportError:
 
 class CRFLayer(Layer):
 
-    def __init__(self, **kwargs):
+    def __init__(self, transition_params=None, **kwargs):
         super(CRFLayer, self).__init__(**kwargs)
-        self.input_spec = [InputSpec(ndim=3)]
+        self.transition_params = transition_params
+        self.input_spec = [InputSpec(ndim=3), InputSpec(ndim=2)]
 
     def compute_output_shape(self, input_shape):
-        assert input_shape and len(input_shape) == 3
+        assert input_shape and len(input_shape[0]) == 3
 
-        return input_shape[0], input_shape[1], input_shape[2]
+        return input_shape[0]
 
     def build(self, input_shape):
-        assert len(input_shape) == 3
-        n_classes = input_shape[2]
-        n_steps = input_shape[1]
+        """
+        Args:
+            input_shape (list(tuple, tuple)): [(batch_size, n_steps, n_classes), (batch_size, 1)]
+        """
+        assert len(input_shape) == 2
+        assert len(input_shape[0]) == 3
+        assert len(input_shape[1]) == 2
+        n_steps = input_shape[0][1]
+        n_classes = input_shape[0][2]
         assert n_steps is None or n_steps >= 2
+
         self.transition_params = self.add_weight(shape=(n_classes, n_classes),
                                                  initializer='uniform',
                                                  name='transition')
-        self.input_spec = [InputSpec(dtype=K.floatx(), shape=(None, n_steps, n_classes))]
+        self.input_spec = [InputSpec(dtype=K.floatx(), shape=(None, n_steps, n_classes)),
+                           InputSpec(dtype='int32', shape=(None, 1))]
         self.built = True
 
     def viterbi_decode(self, potentials, sequence_length):
@@ -180,7 +189,8 @@ class CRFLayer(Layer):
 
         return decode_tags
 
-    def call(self, inputs, sequence_lengths, **kwargs):
+    def call(self, inputs, **kwargs):
+        inputs, sequence_lengths = inputs
         self.sequence_lengths = K.flatten(sequence_lengths)
         y_pred = self.viterbi_decode(inputs, self.sequence_lengths)
         nb_classes = self.input_spec[0].shape[2]

@@ -4,7 +4,7 @@ import numpy as np
 from keras.layers import Embedding, Input
 from keras.models import Model, load_model
 
-from crf import CRFLayer
+from crf import CRFLayer, create_custom_objects
 
 
 class LayerTest(unittest.TestCase):
@@ -38,15 +38,15 @@ class LayerTest(unittest.TestCase):
         word_embeddings = Embedding(vocab_size, n_classes)(word_ids)
         sequence_lengths = Input(batch_shape=[batch_size, 1], dtype='int32')
         crf = CRFLayer()
-        pred = crf(inputs=word_embeddings, sequence_lengths=sequence_lengths)
+        pred = crf([word_embeddings, sequence_lengths])
         model = Model(inputs=[word_ids, sequence_lengths], outputs=[pred])
         model.compile(loss=crf.loss, optimizer='sgd')
 
         # Train first 1 batch
         model.train_on_batch([x, s], y)
 
+        # Save the model
         model.save(self.filename)
 
     def test_load_model(self):
-        model = load_model(self.filename, custom_objects={'CRFLayer': CRFLayer})
-        from keras.layers.merge import Concatenate
+        model = load_model(self.filename, custom_objects=create_custom_objects())
