@@ -1,17 +1,12 @@
 import tensorflow as tf
 from keras import backend as K
-from keras import initializers, regularizers, constraints
 from keras.engine import Layer, InputSpec
 
 try:
     from tensorflow.contrib.crf import crf_decode
 except ImportError:
     from tensorflow.python.framework import dtypes
-    from tensorflow.python.ops import array_ops
-    from tensorflow.python.ops import gen_array_ops
-    from tensorflow.python.ops import math_ops
-    from tensorflow.python.ops import rnn
-    from tensorflow.python.ops import rnn_cell
+    from tensorflow.python.ops import array_ops, gen_array_ops, math_ops, rnn, rnn_cell
 
 
     class CrfDecodeForwardRnnCell(rnn_cell.RNNCell):
@@ -166,7 +161,8 @@ class CRFLayer(Layer):
         return input_shape[0]
 
     def build(self, input_shape):
-        """
+        """Creates the layer weights.
+
         Args:
             input_shape (list(tuple, tuple)): [(batch_size, n_steps, n_classes), (batch_size, 1)]
         """
@@ -185,6 +181,18 @@ class CRFLayer(Layer):
         self.built = True
 
     def viterbi_decode(self, potentials, sequence_length):
+        """Decode the highest scoring sequence of tags in TensorFlow.
+
+        This is a function for tensor.
+
+        Args:
+            potentials: A [batch_size, max_seq_len, num_tags] tensor, matrix of unary potentials.
+            sequence_length: A [batch_size] tensor, containing sequence lengths.
+
+        Returns:
+            decode_tags: A [batch_size, max_seq_len] tensor, with dtype tf.int32.
+                         Contains the highest scoring tag indicies.
+        """
         decode_tags, best_score = crf_decode(potentials, self.transition_params, sequence_length)
 
         return decode_tags
@@ -199,6 +207,15 @@ class CRFLayer(Layer):
         return K.in_train_phase(inputs, y_pred_one_hot)
 
     def loss(self, y_true, y_pred):
+        """Computes the log-likelihood of tag sequences in a CRF.
+
+        Args:
+            y_true : A (batch_size, n_steps, n_classes) tensor.
+            y_pred : A (batch_size, n_steps, n_classes) tensor.
+
+        Returns:
+            loss: A scalar containing the log-likelihood of the given sequence of tag indices.
+        """
         y_true = K.cast(K.argmax(y_true, axis=-1), dtype='int32')
         log_likelihood, self.transition_params = tf.contrib.crf.crf_log_likelihood(
             y_pred, y_true, self.sequence_lengths, self.transition_params)
