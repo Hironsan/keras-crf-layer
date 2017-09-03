@@ -40,4 +40,21 @@ model.compile(loss=crf.loss, optimizer='sgd')
 
 # Train first 1 batch.
 model.train_on_batch([x, s], y)
+
+# Save the model
+model.save('model.h5')
+```
+
+### Model loading                                                                                                       
+When you want to load a saved model that has a crf output, then loading
+the model with 'keras.models.load_model' won't work properly because
+the reference of the loss function to the transition parameters is lost. To
+fix this, you need to use the parameter 'custom_objects' as follows: 
+
+```python
+from keras.models import load_model
+
+from crf import create_custom_objects
+
+model = load_model('model.h5', custom_objects=create_custom_objects())
 ```
