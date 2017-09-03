@@ -154,6 +154,7 @@ class CRFLayer(Layer):
         super(CRFLayer, self).__init__(**kwargs)
         self.transition_params = transition_params
         self.input_spec = [InputSpec(ndim=3), InputSpec(ndim=2)]
+        self.supports_masking = True
 
     def compute_output_shape(self, input_shape):
         assert input_shape and len(input_shape[0]) == 3
@@ -197,7 +198,7 @@ class CRFLayer(Layer):
 
         return decode_tags
 
-    def call(self, inputs, **kwargs):
+    def call(self, inputs, mask=None, **kwargs):
         inputs, sequence_lengths = inputs
         self.sequence_lengths = K.flatten(sequence_lengths)
         y_pred = self.viterbi_decode(inputs, self.sequence_lengths)
