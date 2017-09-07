@@ -31,8 +31,9 @@ s = np.asarray([maxlen] * batch_size, dtype='int32')
 
 # Build an example model.
 word_ids = Input(batch_shape=(batch_size, maxlen), dtype='int32')
-word_embeddings = Embedding(vocab_size, n_classes)(word_ids)
 sequence_lengths = Input(batch_shape=[batch_size, 1], dtype='int32')
+
+word_embeddings = Embedding(vocab_size, n_classes)(word_ids)
 crf = CRFLayer()
 pred = crf(inputs=word_embeddings, sequence_lengths=sequence_lengths)
 model = Model(inputs=[word_ids, sequence_lengths], outputs=[pred])
